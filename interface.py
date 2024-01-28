@@ -70,7 +70,7 @@ class InterfaceApp:
 
     def update_progress_identification(self, value):
         self.progress_var_identification.set(value)
-        message = f"Identification des doublons : {round(value)}%"
+        message = f"Progression en cours : {round(value)}%"
         self.progress_messages = message
         self.output_text.set(self.progress_messages)
 
