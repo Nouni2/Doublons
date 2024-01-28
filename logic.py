@@ -1,8 +1,26 @@
+# logic.py
+
 import os
 from PIL import Image
 import shutil
 from tqdm import tqdm
 import time
+
+# Ajoutez ces variables globales
+total_files_identification = 0
+processed_files_identification = 0
+
+total_files_deplacement = 0
+processed_files_deplacement = 0
+
+# Ajoutez ces fonctions pour envoyer des mises à jour à l'interface
+def update_progress_identification(value):
+    global processed_files_identification
+    processed_files_identification = value
+
+def update_progress_deplacement(value):
+    global processed_files_deplacement
+    processed_files_deplacement = value
 
 def compare_images(img1, img2):
     try:
@@ -13,12 +31,17 @@ def compare_images(img1, img2):
 
     return image1.tobytes() == image2.tobytes()
 
-def identify_duplicates(folder_path):
+def identify_duplicates(folder_path,progress_callback):
+    global total_files_identification
+    global processed_files_identification
+
     # Utiliser directement le dossier spécifié depuis l'interface
     photos_folder = folder_path
     files = [f for f in os.listdir(photos_folder) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
     duplicates_dict = {}
     marked_as_duplicates = set()
+
+    total_files_identification = len(files)
 
     for i, file1 in enumerate(tqdm(files, desc="Identification des doublons")):
         if file1 in marked_as_duplicates:
@@ -58,9 +81,15 @@ def identify_duplicates(folder_path):
         if duplicates:
             duplicates_dict[file1] = duplicates
 
+        processed_files_identification = i + 1
+        progress_callback(processed_files_identification / total_files_identification * 100)
+
     return duplicates_dict, marked_as_duplicates
 
-def move_duplicates(duplicates_dict, marked_as_duplicates, folder_path):
+def move_duplicates(duplicates_dict, marked_as_duplicates, folder_path, progress_callback):
+    global total_files_deplacement
+    global processed_files_deplacement
+
     photos_folder = folder_path  # Utiliser directement le dossier spécifié
     output_folder = os.path.join(folder_path, "Doublons")
     temp_folder = os.path.join(folder_path, "Temp")
@@ -92,6 +121,9 @@ def move_duplicates(duplicates_dict, marked_as_duplicates, folder_path):
                 shutil.copy2(os.path.join(photos_folder, duplicate), os.path.join(temp_folder, duplicate))
                 moved_files[duplicate] = True  # Marque le fichier doublon comme déplacé
 
+        processed_files_deplacement += 1
+        progress_callback(processed_files_deplacement / max(1,total_files_deplacement) * 100)
+
     # Suppression des fichiers d'origine
     for file in moved_files.keys():
         file_path = os.path.join(photos_folder, file)
@@ -107,9 +139,7 @@ def move_duplicates(duplicates_dict, marked_as_duplicates, folder_path):
 
     # Génération des statistiques et des logs
     generate_stats_logs(folder_path, duplicates_dict, marked_files)
-
-
-
+    return duplicates_dict, marked_as_duplicates
 
 def generate_stats_logs(folder_path, duplicates_dict, marked_files):
     total_photos_folder = folder_path
